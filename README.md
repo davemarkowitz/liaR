@@ -31,7 +31,6 @@ print(result)
 # Load your CSV file
 data <- read.csv("your_data.csv")
 
-# Run comprehensive analysis
 result <- deception_metrics(
   ground_truth = data$actual,  # column containing ground truth labels
   response = data$predicted,   # column containing participant responses  
