@@ -55,3 +55,7 @@ result2 <- deception_metrics(
   honest_value = "A", 
   deceptive_value = "B"
 )
+```
+# liaR Author Notes
+
+This R package was created by David M. Markowitz (dmm@msu.edu). All underlying technical aspects of the code were created by him and prepared for GitHub submission using Claude (e.g., commenting for clarity, document preparation). Please contact the author with any questions or suggestions for improvement.
