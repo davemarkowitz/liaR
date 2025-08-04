@@ -2,6 +2,8 @@
 
 An R package for calculating deception detection accuracy and Signal Detection Theory (SDT) metrics for deception detection research. The package calculates four raw deception detection metrics (i.e., overall accuracy, truth-bias, truth accuracy, lie accuracy) and five signal detection metrics (i.e., d-prime, a-prime, beta, b-double-prime d, criterion). Raw hits, misses, false alarms, and correct rejections are calculated as well.
 
+Results can be easily exported to CSV files.
+
 ## Installation
 
 You can install the development version of liaR from GitHub:
