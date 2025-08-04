@@ -1,0 +1,22 @@
+Package: liaR
+Type: Package
+Title: Deception Detection and Signal Detection Theory Analysis for Deception Detection Studies
+Version: 0.1.0
+Authors@R: person("David", "Markowitz", email = "dmm@msu.edu", role = c("aut", "cre"))
+Description: Provides functions for calculating detection accuracy metrics and Signal Detection Theory (SDT) measures for deception detection research. Includes support for meta-analysis and correlational analyses across multiple studies.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenType: 7.2.3
+Imports:
+    dplyr,
+    magrittr,
+    stats
+Suggests:
+    apaTables,
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
+URL: https://github.com/davemarkowitz/liaR
+BugReports: https://github.com/davemarkowitz/liaR/issues
