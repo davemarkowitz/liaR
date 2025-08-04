@@ -1,6 +1,6 @@
 # liaR
 
-An R package for calculating deception detection accuracy and Signal Detection Theory (SDT) metrics for deception detection research.
+An R package for calculating deception detection accuracy and Signal Detection Theory (SDT) metrics for deception detection research. The package calculates four raw deception detection metrics (i.e., overall accuracy, truth-bias, truth accuracy, lie accuracy) and five signal detection metrics (i.e., d-prime, a-prime, beta, b-double-prime d, criterion). Raw hits, misses, false alarms, and correct rejections are calculated as well.
 
 ## Installation
 
@@ -10,6 +10,8 @@ You can install the development version of liaR from GitHub:
 # install.packages("devtools")
 devtools::install_github("davemarkowitz/liaR")
 
+```
+```r
 # Load the package
 library(liaR)
 
@@ -22,19 +24,21 @@ result <- deception_metrics(
 ground_truth = ground_truth,
 response = response)
 print(result)
-
+```
+```r
 # Load your CSV file
 data <- read.csv("your_data.csv")
 
 # Run comprehensive analysis
 result <- deception_metrics(
-  ground_truth = data$actual,           # Your ground truth column
-  response = data$predicted,            # Your response column  
-  study = data$study_id,               # Study grouping (optional)
-  export_csv = TRUE,                   # Export results to CSV
-  corr_table = TRUE                    # Create correlation table
+  ground_truth = data$actual,  # column containing ground truth labels
+  response = data$predicted,   # column containing participant responses  
+  study = data$study_id,       # column containing study labels (optional)
+  export_csv = TRUE,           # export results to CSV
+  corr_table = TRUE            # create correlation matrix from raw deception detection and SDT metrics
 )
-
+```
+```r
 # View results
 print(result)
 
