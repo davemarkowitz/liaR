@@ -38,10 +38,10 @@ result <- deception_metrics(
   export_csv = TRUE,           # export results to CSV
   corr_table = TRUE            # create correlation matrix from raw deception detection and SDT metrics
 )
+
+print(result)
 ```
 ```r
-# View results
-print(result)
 
 # Works with different coding schemes automatically
 ground_truth1 <- c("truth", "lie", "truth", "lie")
