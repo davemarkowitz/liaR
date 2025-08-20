@@ -4,8 +4,9 @@
 \alias{deception_metrics}
 \title{Calculate Comprehensive Deception Detection and SDT Metrics}
 \usage{
-deception_metrics(ground_truth, response, study = NULL, honest_value = NULL, 
-                 deceptive_value = NULL, export_csv = FALSE, corr_table = FALSE)
+deception_metrics(ground_truth, response, study = NULL, participant_id = NULL,
+                 honest_value = NULL, deceptive_value = NULL, export_csv = FALSE, 
+                 corr_table = FALSE)
 }
 \arguments{
 \item{ground_truth}{A vector of ground truth labels. Should contain exactly 2 unique values
@@ -17,6 +18,8 @@ scheme as ground_truth}
 
 \item{study}{An optional vector of study identifiers for grouping (default: NULL)}
 
+\item{participant_id}{An optional vector of participant identifiers for grouping (default: NULL)}
+
 \item{honest_value}{Optional: specify which value represents "honest" responses
 (default: auto-detected or "honest")}
 
@@ -25,12 +28,24 @@ scheme as ground_truth}
 
 \item{export_csv}{Logical. If TRUE, exports results to a CSV file with current date (default: FALSE)}
 
-\item{corr_table}{Logical. If TRUE, creates APA-style correlation table of all metrics (default: FALSE)}
+\item{corr_table}{Logical. If TRUE, creates APA-style correlation table of all metrics. 
+When participant_id is provided, creates two correlation tables: one at the participant 
+level and one at the study level (averaged across participants). When participant_id 
+is not provided, creates one correlation table at the study level (default: FALSE)}
 }
 \value{
-A data frame containing comprehensive deception detection metrics:
+When participant_id is provided, returns a list with two elements:
+\describe{
+  \item{participant_level}{Data frame with metrics for each participant within each study}
+  \item{study_level}{Data frame with study-level metrics averaged across participants within studies}
+}
+
+When participant_id is not provided, returns a single data frame with study-level metrics.
+
+Each data frame contains comprehensive deception detection metrics:
 \describe{
   \item{study}{Study identifier (if provided)}
+  \item{participant_id}{Participant identifier (only in participant_level results)}
   \item{n_total}{Total number of observations}
   \item{n_valid}{Number of valid (non-NA) responses}
   \item{accuracy}{Proportion of correct responses}
@@ -55,8 +70,10 @@ A data frame containing comprehensive deception detection metrics:
 \description{
 This function calculates both basic detection accuracy metrics and comprehensive
 Signal Detection Theory (SDT) metrics for deception detection studies, optionally 
-grouped by study. The function automatically detects unique values in your data 
+grouped by study and/or participant. The function automatically detects unique values in your data 
 and provides guidance if the standard "honest"/"deceptive" coding is not used.
+When participant_id is provided, metrics are calculated for each participant within each study.
+When only study is provided, metrics are aggregated at the study level.
 }
 \examples{
 # Standard coding
@@ -74,5 +91,20 @@ study <- c(rep("study1", 2), rep("study2", 2))
 ground_truth <- c("honest", "deceptive", "honest", "deceptive")
 response <- c("honest", "honest", "honest", "deceptive")
 deception_metrics(ground_truth, response, study, export_csv = TRUE, corr_table = TRUE)
+
+# With participant grouping (participant-level analysis)
+participant_id <- c("P1", "P1", "P2", "P2")
+ground_truth <- c("honest", "deceptive", "honest", "deceptive")
+response <- c("honest", "honest", "honest", "deceptive")
+deception_metrics(ground_truth, response, participant_id = participant_id)
+
+# With both study and participant grouping (returns both participant and study level results)
+study <- c(rep("study1", 4), rep("study2", 4))
+participant_id <- c("P1", "P1", "P2", "P2", "P3", "P3", "P4", "P4")
+ground_truth <- rep(c("honest", "deceptive"), 4)
+response <- c("honest", "honest", "honest", "deceptive", "honest", "deceptive", "deceptive", "deceptive")
+results <- deception_metrics(ground_truth, response, study = study, participant_id = participant_id, 
+                            corr_table = TRUE)  # Creates both participant and study level correlation matrices
+# Access results: results$participant_level and results$study_level
 
 }
