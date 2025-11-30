@@ -79,6 +79,22 @@ result3 <- deception_metrics(
 
 print(result3)
 ```
+```r
+# Study exclusion options
+data <- read.csv("your_data.csv")
+
+result3 <- deception_metrics(
+  ground_truth = data$actual,       # column containing ground truth labels
+  response = data$predicted,        # column containing participant responses  
+  study = data$study_id,            # column containing study labels (optional)
+  export_csv = TRUE,                # export results to CSV
+  corr_table = TRUE,                # create correlation matrix from raw deception detection and SDT metrics
+  participant_id = data$ResponseId, # if specified, data will first be aggregated and then averaged by a participant identifier (then, aggregated by study)
+  exclude_study = "study_label"     # if specified, data from this study will be removed from all calculations and CSV files
+)
+
+print(result3)
+```
 
 ```
 # liaR Author Notes
