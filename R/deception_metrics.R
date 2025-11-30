@@ -18,6 +18,7 @@
 #'   (default: auto-detected or "deceptive")
 #' @param export_csv Logical. If TRUE, exports results to a CSV file with current date (default: FALSE)
 #' @param corr_table Logical. If TRUE, creates APA-style correlation table of all metrics (default: FALSE)
+#' @param exclude_study Character vector of study names to exclude from all analyses (default: NULL)
 #'
 #' @return A data frame containing comprehensive deception detection metrics:
 #' \describe{
@@ -61,6 +62,10 @@
 #' # With both study and participant grouping
 #' deception_metrics(ground_truth, response, study = study, participant_id = participant_id)
 #'
+#' # Exclude specific studies from all analyses
+#' deception_metrics(ground_truth, response, study = study, 
+#'                   export_csv = TRUE, exclude_study = c("study1", "study3"))
+#'
 #' # Multiple studies with CSV export and correlation table
 #' study <- c(rep("study1", 2), rep("study2", 2))
 #' ground_truth <- c("honest", "deceptive", "honest", "deceptive")
@@ -72,7 +77,7 @@
 #' @importFrom magrittr %>%
 deception_metrics <- function(ground_truth, response, study = NULL, participant_id = NULL,
                              honest_value = NULL, deceptive_value = NULL,
-                             export_csv = FALSE, corr_table = FALSE) {
+                             export_csv = FALSE, corr_table = FALSE, exclude_study = NULL) {
   
   # Automatically load required packages
   if (!requireNamespace("dplyr", quietly = TRUE)) {
@@ -85,6 +90,24 @@ deception_metrics <- function(ground_truth, response, study = NULL, participant_
   # Load the packages
   library(dplyr, quietly = TRUE)
   library(magrittr, quietly = TRUE)
+  
+  # Apply study exclusions BEFORE any analysis
+  if (!is.null(exclude_study) && !is.null(study)) {
+    original_n <- length(ground_truth)
+    keep_indices <- !study %in% exclude_study
+    
+    ground_truth <- ground_truth[keep_indices]
+    response <- response[keep_indices]
+    study <- study[keep_indices]
+    if (!is.null(participant_id)) {
+      participant_id <- participant_id[keep_indices]
+    }
+    
+    excluded_n <- original_n - length(ground_truth)
+    if (excluded_n > 0) {
+      message(paste("Excluded", excluded_n, "observations from studies:", paste(exclude_study, collapse = ", ")))
+    }
+  }
   
   # Input validation
   if (length(ground_truth) != length(response)) {
@@ -242,9 +265,9 @@ deception_metrics <- function(ground_truth, response, study = NULL, participant_
     }
   }
   
-  # Create correlation table if requested
+  # Create correlation table if requested (no need to pass exclude_study since data is already filtered)
   if (corr_table) {
-    create_correlation_table(result)
+    create_correlation_table(result, exclude_study = NULL)
   }
   
   return(result)
