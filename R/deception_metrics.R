@@ -50,29 +50,22 @@
 #' response <- c("honest", "honest", "honest", "deceptive")
 #' deception_metrics(ground_truth, response)
 #'
-#' # Alternative coding schemes
-#' ground_truth <- c("truth", "lie", "truth", "lie")
-#' response <- c("truth", "truth", "truth", "lie")
-#' deception_metrics(ground_truth, response, honest_value = "truth", deceptive_value = "lie")
+#' # With study grouping
+#' study <- c("study1", "study1", "study2", "study2")
+#' deception_metrics(ground_truth, response, study = study)
+#'
+#' # With participant grouping
+#' participant_id <- c("P1", "P1", "P2", "P2")
+#' deception_metrics(ground_truth, response, participant_id = participant_id)
+#'
+#' # With both study and participant grouping
+#' deception_metrics(ground_truth, response, study = study, participant_id = participant_id)
 #'
 #' # Multiple studies with CSV export and correlation table
 #' study <- c(rep("study1", 2), rep("study2", 2))
 #' ground_truth <- c("honest", "deceptive", "honest", "deceptive")
 #' response <- c("honest", "honest", "honest", "deceptive")
 #' deception_metrics(ground_truth, response, study, export_csv = TRUE, corr_table = TRUE)
-#'
-#' # With participant grouping
-#' participant_id <- c("P1", "P1", "P2", "P2")
-#' ground_truth <- c("honest", "deceptive", "honest", "deceptive")
-#' response <- c("honest", "honest", "honest", "deceptive")
-#' deception_metrics(ground_truth, response, participant_id = participant_id)
-#'
-#' # With both study and participant grouping
-#' study <- c(rep("study1", 4), rep("study2", 4))
-#' participant_id <- c("P1", "P1", "P2", "P2", "P3", "P3", "P4", "P4")
-#' ground_truth <- rep(c("honest", "deceptive"), 4)
-#' response <- c("honest", "honest", "honest", "deceptive", "honest", "deceptive", "deceptive", "deceptive")
-#' deception_metrics(ground_truth, response, study = study, participant_id = participant_id)
 #'
 #' @export
 #' @importFrom dplyr group_by group_modify ungroup
@@ -152,123 +145,106 @@ deception_metrics <- function(ground_truth, response, study = NULL, participant_
   
   message(paste0("Using coding scheme: honest = '", honest_value, "', deceptive = '", deceptive_value, "'"))
   
+  # Determine grouping strategy
+  if (!is.null(study) && !is.null(participant_id)) {
+    grouping_var <- paste(study, participant_id, sep = "_")
+    grouping_type <- "study_participant"
+    message("Grouping by both study and participant")
+  } else if (!is.null(participant_id)) {
+    grouping_var <- participant_id
+    grouping_type <- "participant"
+    message("Grouping by participant")
+  } else if (!is.null(study)) {
+    grouping_var <- study
+    grouping_type <- "study"
+    message("Grouping by study")
+  } else {
+    grouping_var <- rep("overall", length(ground_truth))
+    grouping_type <- "overall"
+  }
+  
   # Create data frame and convert empty strings to NA
   data <- data.frame(
     ground_truth = ifelse(ground_truth == "", NA, ground_truth),
     response = ifelse(response == "", NA, response),
-    study = if (is.null(study)) rep("overall", length(ground_truth)) else study,
+    grouping = grouping_var,
+    study = if (is.null(study)) NA else study,
+    participant_id = if (is.null(participant_id)) NA else participant_id,
     stringsAsFactors = FALSE
   )
-  
-  # Add participant_id if provided
-  if (!is.null(participant_id)) {
-    data$participant_id <- participant_id
-  }
   
   # Calculate basic metrics using detected values
   data$accuracy <- ifelse(is.na(data$response), NA,
                          ifelse(as.character(data$response) == as.character(data$ground_truth), 1, 0))
   data$truth_bias <- ifelse(as.character(data$response) == honest_value, 1, 0)
   
-  # Determine grouping strategy
-  if (!is.null(participant_id)) {
-    # Calculate participant-level metrics first
-    participant_results <- data %>%
-      dplyr::group_by(study, participant_id) %>%
-      dplyr::group_modify(~ calculate_sdt_metrics(.x, honest_value, deceptive_value)) %>%
-      dplyr::ungroup()
-    
-    # Calculate study-level metrics by averaging participant results within studies
-    study_results <- participant_results %>%
-      dplyr::group_by(study) %>%
-      dplyr::summarise(
-        n_total = sum(n_total, na.rm = TRUE),
-        n_valid = sum(n_valid, na.rm = TRUE),
-        accuracy = mean(accuracy, na.rm = TRUE),
-        truth_bias = mean(truth_bias, na.rm = TRUE),
-        truth_accuracy = mean(truth_accuracy, na.rm = TRUE),
-        lie_accuracy = mean(lie_accuracy, na.rm = TRUE),
-        hits = sum(hits, na.rm = TRUE),
-        misses = sum(misses, na.rm = TRUE),
-        false_alarms = sum(false_alarms, na.rm = TRUE),
-        correct_rejections = sum(correct_rejections, na.rm = TRUE),
-        hit_rate = mean(hit_rate, na.rm = TRUE),
-        false_alarm_rate = mean(false_alarm_rate, na.rm = TRUE),
-        d_prime = mean(d_prime, na.rm = TRUE),
-        a_prime = mean(a_prime, na.rm = TRUE),
-        beta = mean(beta, na.rm = TRUE),
-        bppd = mean(bppd, na.rm = TRUE),
-        criterion = mean(criterion, na.rm = TRUE),
-        honest_value = first(honest_value),
-        deceptive_value = first(deceptive_value),
-        .groups = 'drop'
-      ) %>%
-      # Round the averaged values
-      dplyr::mutate(
-        accuracy = round(accuracy, 4),
-        truth_bias = round(truth_bias, 4),
-        truth_accuracy = round(truth_accuracy, 4),
-        lie_accuracy = round(lie_accuracy, 4),
-        hit_rate = round(hit_rate, 4),
-        false_alarm_rate = round(false_alarm_rate, 4),
-        d_prime = round(d_prime, 4),
-        a_prime = round(a_prime, 4),
-        beta = round(beta, 4),
-        bppd = round(bppd, 4),
-        criterion = round(criterion, 4)
-      )
-    
-    result <- participant_results
-    study_level_result <- study_results
-    
-  } else {
-    # Just aggregate by study
-    result <- data %>%
-      dplyr::group_by(study) %>%
-      dplyr::group_modify(~ calculate_sdt_metrics(.x, honest_value, deceptive_value)) %>%
-      dplyr::ungroup()
-    
-    study_level_result <- NULL
-  }
+  # Apply comprehensive SDT calculation by grouping
+  result <- data %>%
+    dplyr::group_by(grouping) %>%
+    dplyr::group_modify(~ calculate_sdt_metrics(.x, honest_value, deceptive_value)) %>%
+    dplyr::ungroup()
   
-  # If no study grouping was provided, remove the study column
-  if (is.null(study)) {
-    result$study <- NULL
+  # Add back study and participant_id columns
+  if (grouping_type == "study_participant") {
+    result$study <- sapply(strsplit(as.character(result$grouping), "_"), function(x) x[1])
+    result$participant_id <- sapply(strsplit(as.character(result$grouping), "_"), function(x) 
+      paste(x[-1], collapse = "_"))
+    result$grouping <- NULL
+    # Reorder columns
+    result <- result[, c("study", "participant_id", setdiff(names(result), c("study", "participant_id")))]
+  } else if (grouping_type == "participant") {
+    result$participant_id <- result$grouping
+    result$grouping <- NULL
+    result <- result[, c("participant_id", setdiff(names(result), "participant_id"))]
+  } else if (grouping_type == "study") {
+    result$study <- result$grouping
+    result$grouping <- NULL
+    result <- result[, c("study", setdiff(names(result), "study"))]
+  } else {
+    result$grouping <- NULL
   }
   
   # Export to CSV if requested
   if (export_csv) {
     current_date <- format(Sys.Date(), "%Y-%m-%d")
     
-    if (!is.null(participant_id)) {
+    # Always export the primary results
+    if (grouping_type == "study_participant") {
       # Export participant-level results
-      participant_filename <- paste0("deception_analysis_participant_level_", current_date, ".csv")
-      write.csv(result, participant_filename, row.names = FALSE)
-      message(paste("Participant-level results exported to:", participant_filename))
+      filename_participant <- paste0("deception_analysis_participant_level_", current_date, ".csv")
+      write.csv(result, filename_participant, row.names = FALSE)
+      message(paste("Participant-level results exported to:", filename_participant))
       
-      # Export study-level results (averaged from participants)
-      study_filename <- paste0("deception_analysis_study_level_", current_date, ".csv")
-      write.csv(study_level_result, study_filename, row.names = FALSE)
-      message(paste("Study-level results (averaged from participants) exported to:", study_filename))
+      # Also calculate and export study-level aggregates
+      study_result <- data %>%
+        dplyr::group_by(study) %>%
+        dplyr::group_modify(~ calculate_sdt_metrics(.x, honest_value, deceptive_value)) %>%
+        dplyr::ungroup()
       
-    } else {
-      # Export study-level results only
+      filename_study <- paste0("deception_analysis_study_level_", current_date, ".csv")
+      write.csv(study_result, filename_study, row.names = FALSE)
+      message(paste("Study-level results exported to:", filename_study))
+      
+    } else if (grouping_type == "participant") {
+      filename <- paste0("deception_analysis_participant_level_", current_date, ".csv")
+      write.csv(result, filename, row.names = FALSE)
+      message(paste("Results exported to:", filename))
+      
+    } else if (grouping_type == "study") {
       filename <- paste0("deception_analysis_study_level_", current_date, ".csv")
       write.csv(result, filename, row.names = FALSE)
-      message(paste("Study-level results exported to:", filename))
+      message(paste("Results exported to:", filename))
+      
+    } else {
+      filename <- paste0("deception_analysis_results_", current_date, ".csv")
+      write.csv(result, filename, row.names = FALSE)
+      message(paste("Results exported to:", filename))
     }
   }
   
   # Create correlation table if requested
   if (corr_table) {
-    if (!is.null(participant_id)) {
-      # Create both participant-level and study-level correlation tables
-      create_correlation_table(result, "participant")
-      create_correlation_table(study_level_result, "study")
-    } else {
-      # Create study-level correlation table only
-      create_correlation_table(result, "study")
-    }
+    create_correlation_table(result)
   }
   
   return(result)
