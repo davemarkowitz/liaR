@@ -64,7 +64,14 @@ create_correlation_table <- function(result_data, exclude_study = NULL) {
   
   # Create filename with current date
   current_date <- format(Sys.Date(), "%Y-%m-%d")
-  csv_filename <- paste0("deception_sdt_correlation_table_", current_date, ".csv")
+  
+  # Add level indicator to filename
+  has_participant_id <- "participant_id" %in% names(result_data)
+  if (has_participant_id) {
+    csv_filename <- paste0("deception_sdt_correlation_table_participant_level_", current_date, ".csv")
+  } else {
+    csv_filename <- paste0("deception_sdt_correlation_table_study_level_", current_date, ".csv")
+  }
   
   tryCatch({
     # Create correlation results without saving .doc file
@@ -86,10 +93,19 @@ create_correlation_table <- function(result_data, exclude_study = NULL) {
       # Sort studies alphabetically for consistency
       included_studies <- sort(included_studies)
       
+      # Determine if this is participant-level or study-level data
+      has_participant_id <- "participant_id" %in% names(result_data)
+      
       # Create a single string with all study names, properly formatted
       studies_info <- paste("Studies included:", paste(included_studies, collapse = "; "))
       n_studies <- paste("Number of studies:", length(included_studies))
-      n_obs <- paste("Number of observations:", nrow(result_data))
+      
+      # Label observations appropriately
+      if (has_participant_id) {
+        n_obs <- paste("Number of participants:", nrow(result_data))
+      } else {
+        n_obs <- paste("Number of observations:", nrow(result_data))
+      }
       
       # Create info rows - put all text in first column to avoid CSV splitting issues
       info_row1 <- matrix("", nrow = 1, ncol = ncol(corr_table))
