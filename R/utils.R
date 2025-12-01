@@ -21,16 +21,16 @@ calculate_sdt_metrics <- function(data, honest_value, deceptive_value) {
     ))
   }
   
-  # Create contingency table - R automatically detects all values
+  # Create contingency table
   table_data <- table(clean_data$ground_truth, clean_data$response)
   
-  # Calculate basic metrics
+  # Calculate basic metrics - FROM ORIGINAL WORKING VERSION
   n_total <- nrow(data)
   n_valid <- nrow(clean_data)
   accuracy <- mean(clean_data$accuracy, na.rm = TRUE)
   truth_bias <- sum(as.character(clean_data$response) == honest_value, na.rm = TRUE) / n_valid
   
-  # Calculate truth accuracy and lie accuracy
+  # Calculate truth accuracy and lie accuracy - FROM ORIGINAL WORKING VERSION
   # Truth accuracy: accuracy on trials where ground truth is "honest"
   honest_trials <- clean_data[as.character(clean_data$ground_truth) == honest_value, ]
   truth_accuracy <- ifelse(nrow(honest_trials) > 0,
@@ -43,7 +43,7 @@ calculate_sdt_metrics <- function(data, honest_value, deceptive_value) {
                         sum(as.character(deceptive_trials$response) == deceptive_value) / nrow(deceptive_trials),
                         NA)
   
-  # SDT calculations (using deceptive as positive case)
+  # SDT calculations (using deceptive as positive case) - FROM utils_2.R
   # Extract values directly from the table using character indexing
   hits <- ifelse(deceptive_value %in% rownames(table_data) & deceptive_value %in% colnames(table_data),
                  table_data[deceptive_value, deceptive_value], 0)
@@ -84,34 +84,49 @@ calculate_sdt_metrics <- function(data, honest_value, deceptive_value) {
   }
   
   # Calculate d-prime using corrected rates
-  # Return NA if either corrected rate is NA or if both n_signal and n_noise are 0
-  d_prime <- ifelse(!is.na(hit_rate_corrected) & !is.na(false_alarm_rate_corrected) &
-                    n_signal > 0 & n_noise > 0,
-                    qnorm(hit_rate_corrected) - qnorm(false_alarm_rate_corrected), NA)
+  d_prime <- NA
+  if (!is.na(hit_rate_corrected) && !is.na(false_alarm_rate_corrected) &&
+      n_signal > 0 && n_noise > 0) {
+    d_prime <- qnorm(hit_rate_corrected) - qnorm(false_alarm_rate_corrected)
+  }
   
-  # Calculate a-prime (non-parametric sensitivity measure) - uses original rates
-  a_prime <- ifelse(!is.na(hit_rate) & !is.na(false_alarm_rate),
-                    ifelse(hit_rate >= false_alarm_rate,
-                           0.5 + ((hit_rate - false_alarm_rate) * (1 + hit_rate - false_alarm_rate)) /
-                             (4 * hit_rate * (1 - false_alarm_rate)),
-                           0.5 - ((false_alarm_rate - hit_rate) * (1 + false_alarm_rate - hit_rate)) /
-                             (4 * false_alarm_rate * (1 - hit_rate))), NA)
+  # Calculate a-prime (non-parametric sensitivity measure) - uses corrected rates
+  a_prime <- NA
+  if (!is.na(hit_rate_corrected) && !is.na(false_alarm_rate_corrected)) {
+    if (hit_rate_corrected >= false_alarm_rate_corrected) {
+      a_prime <- 0.5 + ((hit_rate_corrected - false_alarm_rate_corrected) * (1 + hit_rate_corrected - false_alarm_rate_corrected)) /
+        (4 * hit_rate_corrected * (1 - false_alarm_rate_corrected))
+    } else {
+      a_prime <- 0.5 - ((false_alarm_rate_corrected - hit_rate_corrected) * (1 + false_alarm_rate_corrected - hit_rate_corrected)) /
+        (4 * false_alarm_rate_corrected * (1 - hit_rate_corrected))
+    }
+  }
   
   # Calculate beta (response bias - likelihood ratio at criterion) using corrected rates
-  beta <- ifelse(!is.na(hit_rate_corrected) & !is.na(false_alarm_rate_corrected) &
-                 n_signal > 0 & n_noise > 0,
-                 exp((qnorm(false_alarm_rate_corrected)^2 - qnorm(hit_rate_corrected)^2) / 2), NA)
+  beta <- NA
+  if (!is.na(hit_rate_corrected) && !is.na(false_alarm_rate_corrected) &&
+      n_signal > 0 && n_noise > 0) {
+    beta <- exp((qnorm(false_alarm_rate_corrected)^2 - qnorm(hit_rate_corrected)^2) / 2)
+  }
   
   # Calculate b-double prime (bppd) - non-parametric response bias measure using corrected rates
-  bppd <- ifelse(!is.na(hit_rate_corrected) & !is.na(false_alarm_rate_corrected) &
-                 n_signal > 0 & n_noise > 0,
-                 (hit_rate_corrected * (1 - hit_rate_corrected) - false_alarm_rate_corrected * (1 - false_alarm_rate_corrected)) /
-                 (hit_rate_corrected * (1 - hit_rate_corrected) + false_alarm_rate_corrected * (1 - false_alarm_rate_corrected)), NA)
+  # Formula from Donaldson (1992) and Stanislaw & Todorov (1999)
+  bppd <- NA
+  if (!is.na(hit_rate_corrected) && !is.na(false_alarm_rate_corrected) &&
+      n_signal > 0 && n_noise > 0) {
+    numerator <- (1 - hit_rate_corrected) * (1 - false_alarm_rate_corrected) - hit_rate_corrected * false_alarm_rate_corrected
+    denominator <- (1 - hit_rate_corrected) * (1 - false_alarm_rate_corrected) + hit_rate_corrected * false_alarm_rate_corrected
+    if (denominator != 0) {
+      bppd <- numerator / denominator
+    }
+  }
   
   # Calculate criterion (c - response bias measure) using corrected rates
-  criterion <- ifelse(!is.na(hit_rate_corrected) & !is.na(false_alarm_rate_corrected) &
-                      n_signal > 0 & n_noise > 0,
-                      -0.5 * (qnorm(hit_rate_corrected) + qnorm(false_alarm_rate_corrected)), NA)
+  criterion <- NA
+  if (!is.na(hit_rate_corrected) && !is.na(false_alarm_rate_corrected) &&
+      n_signal > 0 && n_noise > 0) {
+    criterion <- -0.5 * (qnorm(hit_rate_corrected) + qnorm(false_alarm_rate_corrected))
+  }
   
   return(data.frame(
     n_total = n_total,
