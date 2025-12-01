@@ -206,8 +206,8 @@ deception_metrics <- function(ground_truth, response, study = NULL, participant_
         n_valid = sum(n_valid, na.rm = TRUE),
         accuracy = mean(accuracy, na.rm = TRUE),
         truth_bias = mean(truth_bias, na.rm = TRUE),
-        truth_accuracy = mean(truth_accuracy, na.rm = TRUE),
-        lie_accuracy = mean(lie_accuracy, na.rm = TRUE),
+        # Note: truth_accuracy and lie_accuracy will be recalculated below from pooled counts
+        # This ensures they match correct_rejection_rate and hit_rate respectively
         hits = sum(hits, na.rm = TRUE),
         misses = sum(misses, na.rm = TRUE),
         false_alarms = sum(false_alarms, na.rm = TRUE),
@@ -222,6 +222,12 @@ deception_metrics <- function(ground_truth, response, study = NULL, participant_
         n_noise = false_alarms + correct_rejections,
         hit_rate = ifelse(n_signal > 0, hits / n_signal, NA),
         false_alarm_rate = ifelse(n_noise > 0, false_alarms / n_noise, NA),
+        
+        # Recalculate lie_accuracy and truth_accuracy to match hit_rate and CR_rate
+        # lie_accuracy should equal hit_rate (both are hits/n_signal)
+        lie_accuracy = hit_rate,
+        # truth_accuracy should equal correct_rejection_rate (CR/n_noise)
+        truth_accuracy = ifelse(n_noise > 0, correct_rejections / n_noise, NA),
         
         # Apply extreme value correction
         hit_rate_corrected = hit_rate,
